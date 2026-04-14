@@ -10,7 +10,7 @@ from config import ALLOWED_ORIGINS, SECRET_KEY
 def create_app() -> Flask:
     app = Flask(
         __name__,
-        static_folder="../frontend/dist",
+        static_folder=os.path.join(os.path.dirname(__file__), "frontend", "dist"),
         static_url_path="",
     )
     app.config["SECRET_KEY"] = SECRET_KEY
