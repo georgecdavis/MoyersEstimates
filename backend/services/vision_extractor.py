@@ -148,15 +148,23 @@ def _call_vision(page_paths: list[str], is_first_batch: bool, retries: int = 3) 
         })
 
     for attempt in range(retries):
+        raw_parts: list[str] = []
         try:
-            response = client.messages.create(
+            with client.messages.stream(
                 model=CLAUDE_MODEL,
                 max_tokens=64000,
                 system=SYSTEM_PROMPT,
-                messages=[{"role": "user", "content": content}]
-            )
-            raw = response.content[0].text
-            return _parse_response(raw)
+                messages=[{"role": "user", "content": content}],
+            ) as stream:
+                for delta in stream.text_stream:
+                    raw_parts.append(delta)
+                final = stream.get_final_message()
+                if final.stop_reason == "max_tokens":
+                    logger.warning(
+                        "Claude hit max_tokens on attempt %d; truncation recovery will run",
+                        attempt + 1,
+                    )
+            return _parse_response("".join(raw_parts))
         except json.JSONDecodeError as e:
             logger.warning("JSON parse error on attempt %d: %s", attempt + 1, e)
             if attempt == retries - 1:
@@ -165,7 +173,18 @@ def _call_vision(page_paths: list[str], is_first_batch: bool, retries: int = 3) 
             wait = 20 * (attempt + 1)
             logger.warning("Rate limited, waiting %ds (attempt %d)", wait, attempt + 1)
             time.sleep(wait)
-        except anthropic.APIError as e:
+        except (anthropic.APIConnectionError, anthropic.APIError) as e:
+            # Stream may have been cut mid-flight; try to salvage what we got
+            # before falling through to retry.
+            if raw_parts:
+                try:
+                    logger.warning(
+                        "Stream interrupted on attempt %d (%s); attempting partial parse",
+                        attempt + 1, e,
+                    )
+                    return _parse_response("".join(raw_parts))
+                except json.JSONDecodeError:
+                    pass
             logger.error("API error on attempt %d: %s", attempt + 1, e)
             if attempt == retries - 1:
                 raise
