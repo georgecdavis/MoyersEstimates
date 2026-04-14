@@ -86,10 +86,35 @@ def _encode_image(path: str) -> str:
 
 def _parse_response(text: str) -> dict:
     text = text.strip()
+    # Strip markdown fences if present
     if text.startswith("```"):
         lines = text.split("\n")
         text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-    return json.loads(text)
+
+    # First try: parse as-is
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+
+    # Recovery: response was truncated mid-JSON.
+    # Find the last complete line item (last '}' before the truncation)
+    # and close the array + object properly.
+    try:
+        # Find the last complete object in the line_items array
+        last_complete = text.rfind('},\n')
+        if last_complete == -1:
+            last_complete = text.rfind('}')
+        if last_complete > 0:
+            truncated = text[:last_complete + 1]
+            # Close the line_items array and the outer object
+            recovered = truncated.rstrip().rstrip(',') + '\n  ]\n}'
+            return json.loads(recovered)
+    except (json.JSONDecodeError, Exception):
+        pass
+
+    # If all recovery fails, re-raise with the original text for logging
+    return json.loads(text)  # This will raise JSONDecodeError with the original error
 
 
 def _call_vision(page_paths: list[str], is_first_batch: bool, retries: int = 3) -> dict:
@@ -126,7 +151,7 @@ def _call_vision(page_paths: list[str], is_first_batch: bool, retries: int = 3) 
         try:
             response = client.messages.create(
                 model=CLAUDE_MODEL,
-                max_tokens=8192,
+                max_tokens=64000,
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": content}]
             )
