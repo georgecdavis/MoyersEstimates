@@ -34,6 +34,7 @@ def _job_update(job_id: str, **kwargs):
 def _check_password(req) -> bool:
     provided = (
         req.headers.get("X-App-Password")
+        or req.args.get("password")
         or req.form.get("password")
         or (req.get_json(silent=True) or {}).get("password")
     )
