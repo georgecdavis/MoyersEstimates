@@ -43,23 +43,23 @@ HEADERS = [
 ]
 
 SOURCE_LABELS = [
-    "Pulled from pdf",                          # A
-    "Pulled from pdf",                          # B
-    "Input manually by user",                   # C
-    "Pulled from pdf",                          # D
-    "Pulled from pdf",                          # E
-    "Pulled from pdf",                          # F
-    "Pulled from pdf",                          # G
-    "Pulled from pdf",                          # H
-    "Pulled from pdf",                          # I
-    "Pulled from pdf",                          # J
-    "Pulled from pdf - but No need to track this",  # K
-    "Pulled from pdf - but No need to track this",  # L
-    "Calculated here",                          # M
-    "Input to set tax amount at 6%",            # N
-    "This will be a percentage set per the user",   # O
-    "Calculation",                              # P
-    "Calculation",                              # Q
+    "From PDF",              # A: #
+    "From PDF",              # B: Section / Room
+    "User entry",            # C: Trade
+    "From PDF",              # D: Description
+    "From PDF",              # E: Qty
+    "From PDF",              # F: Unit
+    "From PDF",              # G: Unit Price
+    "From PDF",              # H: Tax
+    "From PDF",              # I: O&P
+    "From PDF",              # J: RCV
+    "From PDF (reference)",  # K: Depreciation
+    "From PDF (reference)",  # L: ACV
+    "Calculated",            # M: Labor
+    "Calculated (6% tax)",   # N: Materials
+    "User entry (%)",        # O: WO%
+    "Calculated",            # P: WO Labor ONLY
+    "Calculated",            # Q: WO L&M
 ]
 
 
