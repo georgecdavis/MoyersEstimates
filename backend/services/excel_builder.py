@@ -147,7 +147,7 @@ def build_excel(
 
         w(1,  idx + 1)                                       # A: line #
         w(2,  item.get("section", ""))                       # B: Section
-        w(3,  item.get("trade", "Misc"))                     # C: Trade
+        w(3,  "")                                            # C: Trade (user-entered)
         w(4,  item.get("description", ""))                   # D: Description
         w(5,  _safe_float(item.get("qty")))                  # E: Qty
         w(6,  item.get("unit", ""))                          # F: Unit
