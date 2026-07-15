@@ -97,4 +97,4 @@ Freeze panes at row 17. Section and Trade columns support Excel slicers.
 | `ALLOWED_ORIGINS` | prod | `*` | CORS allowed origins |
 | `MAX_UPLOAD_MB` | no | `100` | Max PDF size |
 | `VISION_BATCH_SIZE` | no | `8` | Pages per Claude call |
-| `CLAUDE_MODEL` | no | `claude-sonnet-4-20250514` | Claude model |
+| `CLAUDE_MODEL` | no | `claude-opus-4-8` | Claude model |

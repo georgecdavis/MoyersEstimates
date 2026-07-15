@@ -153,6 +153,7 @@ def _call_vision(page_paths: list[str], is_first_batch: bool, retries: int = 3) 
             with client.messages.stream(
                 model=CLAUDE_MODEL,
                 max_tokens=64000,
+                thinking={"type": "disabled"},
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": content}],
             ) as stream:
