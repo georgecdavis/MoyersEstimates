@@ -79,6 +79,64 @@ Return ONLY valid JSON with no markdown, no explanation, no code fences. Use thi
 """
 
 
+TRADES = [
+    "Demo", "Drywall/Plaster", "Electrician", "Flooring-Carpet", "Flooring-Tile",
+    "Flooring-Wood", "HVAC", "Windows", "Doors", "Cabinetry", "Plumbing",
+    "Painting", "Masonry/Fireplace", "Cleaning", "Temp/General Conditions",
+    "Moyers", "Misc",
+]
+
+# Structured-outputs schema: the API constrains the response to this shape,
+# guaranteeing pure JSON (no prose, no code fences) in the reply.
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "metadata": {
+            "type": "object",
+            "properties": {
+                "insured_name": {"type": "string"},
+                "claim_number": {"type": "string"},
+                "insurance_company": {"type": "string"},
+                "property_address": {"type": "string"},
+                "loss_type": {"type": "string"},
+                "date_of_loss": {"type": "string"},
+            },
+            "required": [
+                "insured_name", "claim_number", "insurance_company",
+                "property_address", "loss_type", "date_of_loss",
+            ],
+            "additionalProperties": False,
+        },
+        "line_items": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "section": {"type": "string"},
+                    "description": {"type": "string"},
+                    "qty": {"type": "number"},
+                    "unit": {"type": "string"},
+                    "unit_price": {"type": "number"},
+                    "tax": {"type": "number"},
+                    "o_and_p": {"type": "number"},
+                    "rcv": {"type": "number"},
+                    "depreciation": {"type": "number"},
+                    "acv": {"type": "number"},
+                    "trade": {"type": "string", "enum": TRADES},
+                },
+                "required": [
+                    "section", "description", "qty", "unit", "unit_price",
+                    "tax", "o_and_p", "rcv", "depreciation", "acv", "trade",
+                ],
+                "additionalProperties": False,
+            },
+        },
+    },
+    "required": ["metadata", "line_items"],
+    "additionalProperties": False,
+}
+
+
 def _encode_image(path: str) -> str:
     with open(path, "rb") as f:
         return base64.standard_b64encode(f.read()).decode("utf-8")
@@ -96,6 +154,18 @@ def _parse_response(text: str) -> dict:
         return json.loads(text)
     except json.JSONDecodeError:
         pass
+
+    # The model may have wrapped the JSON in prose (text before the object,
+    # or commentary after it — "Extra data" errors). Decode the first JSON
+    # object in the text and ignore anything surrounding it.
+    start = text.find("{")
+    if start != -1:
+        try:
+            obj, _ = json.JSONDecoder().raw_decode(text, start)
+            if isinstance(obj, dict) and "line_items" in obj:
+                return obj
+        except json.JSONDecodeError:
+            pass
 
     # Recovery: response was truncated mid-JSON.
     # Find the last complete line item (last '}' before the truncation)
@@ -156,6 +226,14 @@ def _call_vision(page_paths: list[str], is_first_batch: bool, retries: int = 3) 
                 thinking={"type": "disabled"},
                 system=SYSTEM_PROMPT,
                 messages=[{"role": "user", "content": content}],
+                # Structured outputs: constrain the response to OUTPUT_SCHEMA so
+                # the reply is guaranteed valid JSON. Passed via extra_body
+                # because the pinned SDK (0.49.0) predates the typed parameter.
+                extra_body={
+                    "output_config": {
+                        "format": {"type": "json_schema", "schema": OUTPUT_SCHEMA}
+                    }
+                },
             ) as stream:
                 for delta in stream.text_stream:
                     raw_parts.append(delta)
